@@ -1,7 +1,9 @@
 package nl.gogognome;
 
 import com.zaxxer.hikari.HikariDataSource;
+import nl.gogognome.dataaccess.migrations.DatabaseMigratorDAO;
 import nl.gogognome.dataaccess.transaction.CompositeDatasourceTransaction;
+import nl.gogognome.dataaccess.transaction.NewTransaction;
 import nl.gogognome.jobscheduler.jobingester.database.JobIngesterProperties;
 import nl.gogognome.jobscheduler.jobpersister.database.DatabaseJobPersister;
 import nl.gogognome.jobscheduler.jobpersister.database.DatabaseJobPersisterProperties;
@@ -36,6 +38,9 @@ public class BeanConfiguration {
         dataSource.setPassword(properties.getDatabasePassword());
         CompositeDatasourceTransaction.registerDataSource(jobIngesterProperties.getConnectionName(), dataSource);
         CompositeDatasourceTransaction.registerDataSource(databaseJobPersisterProperties.getConnectionName(), dataSource);
+
+        NewTransaction.runs(() -> new DatabaseMigratorDAO(jobIngesterProperties.getConnectionName()).applyMigrationsFromResource("/database/_migrations.txt"));
+
         return dataSource;
     }
 
