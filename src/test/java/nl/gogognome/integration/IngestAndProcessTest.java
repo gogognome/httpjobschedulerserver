@@ -41,7 +41,7 @@ public class IngestAndProcessTest {
     @Before
     public void initProperties() {
         properties.setRequestTimeoutMilliseconds(5000);
-        jobIngesterProperties.setSelectAllJobsQuery("SELECT * FROM " + jobIngesterProperties.getTableName() + " LIMIT 100");
+        jobIngesterProperties.setSelectJobCommandsQuery("SELECT * FROM " + jobIngesterProperties.getTableName() + " LIMIT 100");
     }
 
     @Test
@@ -72,7 +72,7 @@ public class IngestAndProcessTest {
 
     @Test
     public void performanceTest_manyJobs_oneThread() {
-        Job[] jobs = new Job[10000];
+        Job[] jobs = new Job[1000];
         for (int i = 0; i<jobs.length; i++) {
             jobs[i] = buildJob(Integer.toString(i));
             jobIngestTestService.createJobCommand(Command.CREATE, jobs[i]);
