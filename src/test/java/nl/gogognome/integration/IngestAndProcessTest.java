@@ -2,13 +2,13 @@ package nl.gogognome.integration;
 
 
 import nl.gogognome.JobResponse;
-import nl.gogognome.dataaccess.transaction.NewTransaction;
+import nl.gogognome.Properties;
 import nl.gogognome.jobscheduler.jobingester.database.Command;
 import nl.gogognome.jobscheduler.jobingester.database.JobIngestTestService;
+import nl.gogognome.jobscheduler.jobingester.database.JobIngesterProperties;
 import nl.gogognome.jobscheduler.scheduler.Job;
 import nl.gogognome.jobscheduler.scheduler.JobState;
-import org.junit.After;
-import org.junit.Ignore;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,10 +27,22 @@ import static org.junit.Assert.*;
 public class IngestAndProcessTest {
 
     @Autowired
+    private Properties properties;
+
+    @Autowired
+    private JobIngesterProperties jobIngesterProperties;
+
+    @Autowired
     private TestRestTemplate restTemplate;
 
     @Autowired
     private JobIngestTestService jobIngestTestService;
+
+    @Before
+    public void initProperties() {
+        properties.setRequestTimeoutMilliseconds(5000);
+        jobIngesterProperties.setSelectAllJobsQuery("SELECT * FROM " + jobIngesterProperties.getTableName() + " LIMIT 100");
+    }
 
     @Test
     public void noJobPresent_getJobViaHttpRequest_getsNoJob() {
@@ -54,6 +66,26 @@ public class IngestAndProcessTest {
         assertEquals(job.getData(), response.getBody().getJobData());
 
         jobIngestTestService.createJobCommand(Command.DELETE, job);
+
+        jobIngestTestService.waitUntilJobsAreIngested();
+    }
+
+    @Test
+    public void performanceTest_manyJobs_oneThread() {
+        Job[] jobs = new Job[10000];
+        for (int i = 0; i<jobs.length; i++) {
+            jobs[i] = buildJob(Integer.toString(i));
+            jobIngestTestService.createJobCommand(Command.CREATE, jobs[i]);
+        }
+
+        for (int i = 0; i<jobs.length; i++) {
+            ResponseEntity<JobResponse> response =
+                    restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, "noJobPresentRequestId");
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertTrue(response.getBody().isJobAvailble());
+            int index = Integer.parseInt(response.getBody().getJobId());
+            jobIngestTestService.createJobCommand(Command.DELETE, jobs[index]);
+        }
 
         jobIngestTestService.waitUntilJobsAreIngested();
     }
