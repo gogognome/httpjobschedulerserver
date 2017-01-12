@@ -14,6 +14,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.cglib.core.internal.Function;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -71,23 +72,41 @@ public class IngestAndProcessTest {
     }
 
     @Test
-    public void performanceTest_manyJobs_oneThread() {
-        Job[] jobs = new Job[10000];
-        for (int i = 0; i<jobs.length; i++) {
+    public void performanceTest_manyJobs_oneThread() throws InterruptedException {
+        requestJobsWithMultipleThreads(10000, 1);
+        jobIngestTestService.waitUntilJobsAreIngested();
+    }
+
+    @Test
+    public void performanceTest_manyJobs_multipleThreads() throws InterruptedException {
+        requestJobsWithMultipleThreads(10000, 10);
+        jobIngestTestService.waitUntilJobsAreIngested();
+    }
+
+    private Job[] createJobs(int nrJobs) {
+        Job[] jobs = new Job[nrJobs];
+        for (int i = 0; i< nrJobs; i++) {
             jobs[i] = buildJob(Integer.toString(i));
             jobIngestTestService.createJobCommand(Command.CREATE, jobs[i]);
         }
+        return jobs;
+    }
 
-        for (int i = 0; i<jobs.length; i++) {
-            ResponseEntity<JobResponse> response =
-                    restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, "noJobPresentRequestId");
-            assertEquals(HttpStatus.OK, response.getStatusCode());
-            assertTrue(response.getBody().isJobAvailble());
-            int index = Integer.parseInt(response.getBody().getJobId());
-            jobIngestTestService.createJobCommand(Command.DELETE, jobs[index]);
+    private void requestJobsWithMultipleThreads(int nrJobs, int nrThreads) throws InterruptedException {
+        Job[] jobs = createJobs(nrJobs);
+        Function<String, Job> getJobById = id -> jobs[Integer.parseInt(id)];
+
+        Thread[] threads = new Thread[nrThreads];
+        JobRequester[] jobRequesters = new JobRequester[threads.length];
+        assertTrue("Nr job requesters must be a divisor of the number of jobs", nrJobs % jobRequesters.length == 0);
+        for (int i=0; i<threads.length; i++) {
+            jobRequesters[i] = new JobRequester("requester-" + i, nrJobs / jobRequesters.length, getJobById);
+            threads[i] = new Thread(jobRequesters[i]);
+            threads[i].start();
         }
-
-        jobIngestTestService.waitUntilJobsAreIngested();
+        for (int i=0; i<threads.length; i++) {
+            threads[i].join();
+        }
     }
 
     private Job buildJob(String jobId) {
@@ -97,5 +116,29 @@ public class IngestAndProcessTest {
         job.setType("no-op");
         job.setData("{ data: \"test data\" }");
         return job;
+    }
+
+    private class JobRequester implements Runnable {
+
+        private final String requesterId;
+        private final int nrJobsToRequest;
+        private final Function<String, Job> getJobById;
+
+        JobRequester(String requesterId, int nrJobsToRequest, Function<String, Job> getJobById) {
+            this.requesterId = requesterId;
+            this.nrJobsToRequest = nrJobsToRequest;
+            this.getJobById = getJobById;
+        }
+
+        @Override
+        public void run() {
+            for (int i = 0; i<nrJobsToRequest; i++) {
+                ResponseEntity<JobResponse> response =
+                        restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, requesterId);
+                assertEquals(HttpStatus.OK, response.getStatusCode());
+                assertTrue(response.getBody().isJobAvailble());
+                jobIngestTestService.createJobCommand(Command.DELETE, getJobById.apply(response.getBody().getJobId()));
+            }
+        }
     }
 }
