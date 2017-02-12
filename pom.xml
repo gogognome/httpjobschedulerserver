@@ -9,7 +9,7 @@
     <packaging>jar</packaging>
 
     <name>httpjobschedulerserver</name>
-    <description>A job scheduler application that offers an HTTP API</description>
+    <description>a job scheduler application that offers an HTTP API</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -20,7 +20,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <project.r4eporting.outputEncoding>UTF-8</project.r4eporting.outputEncoding>
         <java.version>1.8</java.version>
     </properties>
 
