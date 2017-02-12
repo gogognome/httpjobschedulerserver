@@ -104,14 +104,14 @@ public class IngestAndProcessTest {
             threads[i] = new Thread(jobRequesters[i]);
             threads[i].start();
         }
-        for (int i=0; i<threads.length; i++) {
-            threads[i].join();
+        for (Thread thread : threads) {
+            thread.join();
         }
     }
 
     private Job buildJob(String jobId) {
         Job job = new Job(jobId);
-        job.setCreationTimestamp(Instant.now());
+        job.setCreationInstant(Instant.now());
         job.setState(JobState.IDLE);
         job.setType("no-op");
         job.setData("{ data: \"test data\" }");
