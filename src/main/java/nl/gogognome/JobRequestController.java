@@ -33,7 +33,6 @@ public class JobRequestController {
     public void init() {
         logger.trace("init called");
         logger.info("Using database connection URL: " + properties.getDatabaseConnectionUrl());
-        logger.info("Polling interval for handling job commands: " + properties.getPollingIntervalMilliseconds() + " ms");
         logger.info("Request timeout when waiting for runnable job: " + properties.getRequestTimeoutMilliseconds() + " ms");
         jobIngesterRunner.start();
     }
@@ -47,25 +46,18 @@ public class JobRequestController {
     @RequestMapping("/nextjob")
     public JobResponse nextJob(@RequestParam(value="requesterId") String requesterId) {
         logger.trace("nextJob called with requester id " + requesterId);
-        long timeoutTime = System.currentTimeMillis() + properties.getRequestTimeoutMilliseconds();
-        do {
-            Job job = jobScheduler.startNextRunnableJob(requesterId);
-            if (job != null) {
-                logger.debug("found job " + job.getId());
-                JobResponse response = new JobResponse();
-                response.setJobAvailable(true);
-                response.setJobId(job.getId());
-                response.setJobData(job.getData());
-                return response;
-            }
-            try {
-                Thread.sleep(properties.getPollingIntervalMilliseconds());
-            } catch (InterruptedException e) {
-                // ignore this exception
-            }
-        } while (System.currentTimeMillis() < timeoutTime);
 
-        logger.debug("timed out - no job found");
-        return new JobResponse();
+        Job job = jobScheduler.startNextRunnableJob(requesterId, properties.getRequestTimeoutMilliseconds());
+        if (job != null) {
+            logger.debug("found job " + job.getId());
+            JobResponse response = new JobResponse();
+            response.setJobAvailable(true);
+            response.setJobId(job.getId());
+            response.setJobData(job.getData());
+            return response;
+        } else {
+            logger.debug("timed out - no job found");
+            return new JobResponse();
+        }
     }
 }

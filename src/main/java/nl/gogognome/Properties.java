@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 public class Properties {
 
     private int requestTimeoutMilliseconds = 30*1000;
-    private int pollingIntervalMilliseconds = 1000;
     private String databaseConnectionUrl = "jdbc:h2:mem:httpjobscheduler";
     private String databaseUsername = "sa";
     private String databasePassword = "";
@@ -19,14 +18,6 @@ public class Properties {
 
     public void setRequestTimeoutMilliseconds(int requestTimeoutMilliseconds) {
         this.requestTimeoutMilliseconds = requestTimeoutMilliseconds;
-    }
-
-    public int getPollingIntervalMilliseconds() {
-        return pollingIntervalMilliseconds;
-    }
-
-    public void setPollingIntervalMilliseconds(int pollingIntervalMilliseconds) {
-        this.pollingIntervalMilliseconds = pollingIntervalMilliseconds;
     }
 
     public String getDatabaseConnectionUrl() {
