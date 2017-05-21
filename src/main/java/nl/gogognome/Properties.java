@@ -9,7 +9,7 @@ public class Properties {
 
     private int requestTimeoutMilliseconds = 30*1000;
     private int pollingIntervalMilliseconds = 1000;
-    private String databaseConnectionUrl = "jdbc:h2:file:~/httpjobscheduler;AUTO_SERVER=TRUE";
+    private String databaseConnectionUrl = "jdbc:h2:mem:httpjobscheduler";
     private String databaseUsername = "sa";
     private String databasePassword = "";
 
