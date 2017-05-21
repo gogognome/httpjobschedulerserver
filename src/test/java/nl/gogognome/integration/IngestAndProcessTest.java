@@ -20,6 +20,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.Assert.*;
 
@@ -96,17 +101,13 @@ public class IngestAndProcessTest {
         Job[] jobs = createJobs(nrJobs);
         Function<String, Job> getJobById = id -> jobs[Integer.parseInt(id)];
 
-        Thread[] threads = new Thread[nrThreads];
-        JobRequester[] jobRequesters = new JobRequester[threads.length];
-        assertTrue("Nr job requesters must be a divisor of the number of jobs", nrJobs % jobRequesters.length == 0);
-        for (int i=0; i<threads.length; i++) {
-            jobRequesters[i] = new JobRequester("requester-" + i, nrJobs / jobRequesters.length, getJobById);
-            threads[i] = new Thread(jobRequesters[i]);
-            threads[i].start();
+        ExecutorService executorService = Executors.newFixedThreadPool(nrThreads);
+        assertTrue("Nr job requesters must be a divisor of the number of jobs", nrJobs % nrThreads== 0);
+        List<JobRequester> jobRequesters = new ArrayList<>();
+        for (int i=0; i<nrThreads; i++) {
+            jobRequesters.add(new JobRequester("requester-" + i, nrJobs / nrThreads, getJobById));
         }
-        for (Thread thread : threads) {
-            thread.join();
-        }
+        executorService.invokeAll(jobRequesters);
     }
 
     private Job buildJob(String jobId) {
@@ -118,7 +119,7 @@ public class IngestAndProcessTest {
         return job;
     }
 
-    private class JobRequester implements Runnable {
+    private class JobRequester implements Callable<Void> {
 
         private final String requesterId;
         private final int nrJobsToRequest;
@@ -131,7 +132,7 @@ public class IngestAndProcessTest {
         }
 
         @Override
-        public void run() {
+        public Void call() {
             for (int i = 0; i<nrJobsToRequest; i++) {
                 ResponseEntity<JobResponse> response =
                         restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, requesterId);
@@ -139,6 +140,7 @@ public class IngestAndProcessTest {
                 assertTrue(response.getBody().isJobAvailable());
                 jobIngestTestService.createJobCommand(Command.DELETE, getJobById.apply(response.getBody().getJobId()));
             }
+            return null;
         }
     }
 }
