@@ -32,6 +32,9 @@ public class JobRequestController {
     @PostConstruct
     public void init() {
         logger.trace("init called");
+        logger.info("Using database connection URL: " + properties.getDatabaseConnectionUrl());
+        logger.info("Polling interval for handling job commands: " + properties.getPollingIntervalMilliseconds() + " ms");
+        logger.info("Request timeout when waiting for runnable job: " + properties.getRequestTimeoutMilliseconds() + " ms");
         jobIngesterRunner.start();
     }
 
@@ -50,7 +53,7 @@ public class JobRequestController {
             if (job != null) {
                 logger.debug("found job " + job.getId());
                 JobResponse response = new JobResponse();
-                response.setJobAvailble(true);
+                response.setJobAvailable(true);
                 response.setJobId(job.getId());
                 response.setJobData(job.getData());
                 return response;

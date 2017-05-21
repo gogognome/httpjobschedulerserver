@@ -51,7 +51,7 @@ public class IngestAndProcessTest {
                 restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, "noJobPresentRequestId");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertFalse(response.getBody().isJobAvailble());
+        assertFalse(response.getBody().isJobAvailable());
     }
 
     @Test
@@ -63,7 +63,7 @@ public class IngestAndProcessTest {
                 restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, "noJobPresentRequestId");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().isJobAvailble());
+        assertTrue(response.getBody().isJobAvailable());
         assertEquals(job.getData(), response.getBody().getJobData());
 
         jobIngestTestService.createJobCommand(Command.DELETE, job);
@@ -136,7 +136,7 @@ public class IngestAndProcessTest {
                 ResponseEntity<JobResponse> response =
                         restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, requesterId);
                 assertEquals(HttpStatus.OK, response.getStatusCode());
-                assertTrue(response.getBody().isJobAvailble());
+                assertTrue(response.getBody().isJobAvailable());
                 jobIngestTestService.createJobCommand(Command.DELETE, getJobById.apply(response.getBody().getJobId()));
             }
         }

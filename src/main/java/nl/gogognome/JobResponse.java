@@ -2,16 +2,16 @@ package nl.gogognome;
 
 public class JobResponse {
 
-    private boolean jobAvailble;
+    private boolean jobAvailable;
     private String jobId;
     private String jobData;
 
-    public boolean isJobAvailble() {
-        return jobAvailble;
+    public boolean isJobAvailable() {
+        return jobAvailable;
     }
 
-    public void setJobAvailble(boolean jobAvailble) {
-        this.jobAvailble = jobAvailble;
+    public void setJobAvailable(boolean jobAvailable) {
+        this.jobAvailable = jobAvailable;
     }
 
     public String getJobId() {
