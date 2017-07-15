@@ -4,7 +4,7 @@ public class JobResponse {
 
     private boolean jobAvailable;
     private String jobId;
-    private String jobData;
+    private byte[] jobData;
 
     public boolean isJobAvailable() {
         return jobAvailable;
@@ -22,11 +22,11 @@ public class JobResponse {
         this.jobId = jobId;
     }
 
-    public String getJobData() {
+    public byte[] getJobData() {
         return jobData;
     }
 
-    public void setJobData(String jobData) {
+    public void setJobData(byte[] jobData) {
         this.jobData = jobData;
     }
 }

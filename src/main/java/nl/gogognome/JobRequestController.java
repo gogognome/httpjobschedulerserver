@@ -34,6 +34,7 @@ public class JobRequestController {
         logger.trace("init called");
         logger.info("Using database connection URL: " + properties.getDatabaseConnectionUrl());
         logger.info("Request timeout when waiting for runnable job: " + properties.getRequestTimeoutMilliseconds() + " ms");
+        jobScheduler.loadPersistedJobs();
         jobIngesterRunner.start();
     }
 
@@ -47,17 +48,22 @@ public class JobRequestController {
     public JobResponse nextJob(@RequestParam(value="requesterId") String requesterId) {
         logger.trace("nextJob called with requester id " + requesterId);
 
-        Job job = jobScheduler.startNextRunnableJob(requesterId, properties.getRequestTimeoutMilliseconds());
-        if (job != null) {
-            logger.debug("found job " + job.getId());
-            JobResponse response = new JobResponse();
-            response.setJobAvailable(true);
-            response.setJobId(job.getId());
-            response.setJobData(job.getData());
-            return response;
-        } else {
-            logger.debug("timed out - no job found");
-            return new JobResponse();
+        try {
+            Job job = jobScheduler.startNextRunnableJob(requesterId, properties.getRequestTimeoutMilliseconds());
+            if (job != null) {
+                logger.debug("found job " + job.getId());
+                JobResponse response = new JobResponse();
+                response.setJobAvailable(true);
+                response.setJobId(job.getId());
+                response.setJobData(job.getData());
+                return response;
+            } else {
+                logger.debug("timed out - no job found");
+                return new JobResponse();
+            }
+        } catch (Exception e) {
+            jobScheduler.loadPersistedJobs();
+            throw e;
         }
     }
 }

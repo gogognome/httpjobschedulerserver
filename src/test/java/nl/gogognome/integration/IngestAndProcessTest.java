@@ -7,7 +7,6 @@ import nl.gogognome.jobscheduler.jobingester.database.Command;
 import nl.gogognome.jobscheduler.jobingester.database.JobIngestTestService;
 import nl.gogognome.jobscheduler.jobingester.database.JobIngesterProperties;
 import nl.gogognome.jobscheduler.scheduler.Job;
-import nl.gogognome.jobscheduler.scheduler.JobState;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,16 +61,16 @@ public class IngestAndProcessTest {
     @Test
     public void createOneJob_getJobViaHttpRequest_getsJob() {
         Job job = buildJob("1");
-        jobIngestTestService.createJobCommand(Command.CREATE, job);
+        jobIngestTestService.createJobCommand(Command.SCHEDULE, job);
 
         ResponseEntity<JobResponse> response =
                 restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, "noJobPresentRequestId");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().isJobAvailable());
-        assertEquals(job.getData(), response.getBody().getJobData());
+        assertArrayEquals(job.getData(), response.getBody().getJobData());
 
-        jobIngestTestService.createJobCommand(Command.DELETE, job);
+        jobIngestTestService.createJobCommand(Command.JOB_FINISHED, job);
 
         jobIngestTestService.waitUntilJobsAreIngested();
     }
@@ -92,7 +91,7 @@ public class IngestAndProcessTest {
         Job[] jobs = new Job[nrJobs];
         for (int i = 0; i< nrJobs; i++) {
             jobs[i] = buildJob(Integer.toString(i));
-            jobIngestTestService.createJobCommand(Command.CREATE, jobs[i]);
+            jobIngestTestService.createJobCommand(Command.SCHEDULE, jobs[i]);
         }
         return jobs;
     }
@@ -112,10 +111,9 @@ public class IngestAndProcessTest {
 
     private Job buildJob(String jobId) {
         Job job = new Job(jobId);
-        job.setCreationInstant(Instant.now());
-        job.setState(JobState.IDLE);
         job.setType("no-op");
-        job.setData("{ data: \"test data\" }");
+        job.setData(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        job.setScheduledAtInstant(Instant.now());
         return job;
     }
 
@@ -138,7 +136,7 @@ public class IngestAndProcessTest {
                         restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, requesterId);
                 assertEquals(HttpStatus.OK, response.getStatusCode());
                 assertTrue(response.getBody().isJobAvailable());
-                jobIngestTestService.createJobCommand(Command.DELETE, getJobById.apply(response.getBody().getJobId()));
+                jobIngestTestService.createJobCommand(Command.JOB_FINISHED, getJobById.apply(response.getBody().getJobId()));
             }
             return null;
         }
