@@ -11,6 +11,7 @@ public class Properties {
     private String databaseConnectionUrl = "jdbc:h2:mem:httpjobscheduler";
     private String databaseUsername = "sa";
     private String databasePassword = "";
+    private String dataEncoding = "BASE64";
 
     public int getRequestTimeoutMilliseconds() {
         return requestTimeoutMilliseconds;
@@ -42,5 +43,18 @@ public class Properties {
 
     public void setDatabasePassword(String databasePassword) {
         this.databasePassword = databasePassword;
+    }
+
+    public String getDataEncoding() {
+        return dataEncoding;
+    }
+
+    /**
+     * Encoding used to transform the job's data to a String representation.
+     * Use "BASE64" for BASE64 or use the name of a character encoding, like "UTF-8" or "ISO-8559-1".
+     * @param dataEncoding the encoding
+     */
+    public void setDataEncoding(String dataEncoding) {
+        this.dataEncoding = dataEncoding;
     }
 }

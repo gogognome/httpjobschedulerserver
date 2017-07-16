@@ -20,6 +20,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -68,7 +69,7 @@ public class IngestAndProcessTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().isJobAvailable());
-        assertArrayEquals(job.getData(), response.getBody().getJobData());
+        assertArrayEquals(job.getData(), Base64.getDecoder().decode(response.getBody().getJobData()));
 
         jobIngestTestService.createJobCommand(Command.JOB_FINISHED, job);
 

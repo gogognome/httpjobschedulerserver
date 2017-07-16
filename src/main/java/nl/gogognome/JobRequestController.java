@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.nio.charset.Charset;
+import java.util.Base64;
 
 @RestController
 @DependsOn("dataSourceInit")
@@ -22,11 +24,19 @@ public class JobRequestController {
     private final JobScheduler jobScheduler;
     private final Properties properties;
     private final JobIngesterRunner jobIngesterRunner;
+    private Base64.Encoder base64Encoder;
+    private Charset charset;
 
     public JobRequestController(JobScheduler jobScheduler, Properties properties, JobIngesterRunner jobIngesterRunner) {
         this.jobScheduler = jobScheduler;
         this.properties = properties;
         this.jobIngesterRunner = jobIngesterRunner;
+
+        if ("BASE64".equals(properties.getDataEncoding())) {
+            base64Encoder = Base64.getEncoder();
+        } else {
+            charset = Charset.forName(properties.getDataEncoding());
+        }
     }
 
     @PostConstruct
@@ -46,7 +56,7 @@ public class JobRequestController {
 
     @RequestMapping("/nextjob")
     public JobResponse nextJob(@RequestParam(value="requesterId") String requesterId) {
-        logger.trace("nextJob called with requester id " + requesterId);
+        logger.trace("nextJob called for requester " + requesterId);
 
         try {
             Job job = jobScheduler.startNextRunnableJob(requesterId, properties.getRequestTimeoutMilliseconds());
@@ -55,7 +65,7 @@ public class JobRequestController {
                 JobResponse response = new JobResponse();
                 response.setJobAvailable(true);
                 response.setJobId(job.getId());
-                response.setJobData(job.getData());
+                response.setJobData(base64Encoder != null ? base64Encoder.encodeToString(job.getData()) : new String(job.getData(), charset));
                 return response;
             } else {
                 logger.debug("timed out - no job found");
@@ -66,4 +76,5 @@ public class JobRequestController {
             throw e;
         }
     }
+
 }
