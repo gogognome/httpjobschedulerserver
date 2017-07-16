@@ -7,6 +7,9 @@ CREATE TABLE NlGogognomeJobsToIngest (
   PRIMARY KEY (id)
 );
 
+CREATE INDEX idx_NLGogognomeJobsToIngest_id
+ON NlGogognomeJobsToIngest (id);
+
 CREATE TABLE NlGogognomeJobs (
   id VARCHAR(1000),
   scheduledAtInstant TIMESTAMP NULL,
@@ -17,3 +20,6 @@ CREATE TABLE NlGogognomeJobs (
   timeoutAtInstant TIMESTAMP NULL,
   PRIMARY KEY (id)
 );
+
+CREATE INDEX idx_NlGogognomeJobs_id
+ON NlGogognomeJobs (id);
