@@ -1,6 +1,5 @@
 package nl.gogognome.jobscheduler.jobingester.database;
 
-import nl.gogognome.dataaccess.dao.NameValuePairs;
 import nl.gogognome.dataaccess.transaction.NewTransaction;
 import nl.gogognome.jobscheduler.scheduler.Job;
 import org.springframework.stereotype.Component;
@@ -12,6 +11,10 @@ public class JobIngestTestService {
 
     public JobIngestTestService(JobIngesterProperties properties) {
         this.properties = properties;
+    }
+
+    public void createJobCommand(Command command, String jobId) {
+        NewTransaction.runs(() -> new JobCommandDAO(properties).create(new JobCommand(command, new Job(jobId))));
     }
 
     public void createJobCommand(Command command, Job job) {

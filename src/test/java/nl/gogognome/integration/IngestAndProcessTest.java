@@ -13,7 +13,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.cglib.core.internal.Function;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -47,7 +46,7 @@ public class IngestAndProcessTest {
     @Before
     public void initProperties() {
         properties.setRequestTimeoutMilliseconds(5000);
-        jobIngesterProperties.setSelectJobCommandsQuery("SELECT * FROM " + jobIngesterProperties.getTableName() + " LIMIT 1000");
+        jobIngesterProperties.setSelectJobCommandsQuery("SELECT * FROM " + jobIngesterProperties.getTableName() + " LIMIT 100");
     }
 
     @Test
@@ -88,26 +87,24 @@ public class IngestAndProcessTest {
         jobIngestTestService.waitUntilJobsAreIngested();
     }
 
-    private Job[] createJobs(int nrJobs) {
+    private void requestJobsWithMultipleThreads(int nrJobs, int nrThreads) throws InterruptedException {
+        List<Callable<Void>> tasks = new ArrayList<>();
+        tasks.add(() -> { createJobs(nrJobs); return null; } );
+
+        ExecutorService executorService = Executors.newFixedThreadPool(nrThreads);
+        assertTrue("Nr job requesters must be a divisor of the number of jobs", nrJobs % nrThreads== 0);
+        for (int i=0; i<nrThreads; i++) {
+            tasks.add(new JobRequester("requester-" + i, nrJobs / nrThreads));
+        }
+        executorService.invokeAll(tasks);
+    }
+
+    private void createJobs(int nrJobs) {
         Job[] jobs = new Job[nrJobs];
         for (int i = 0; i< nrJobs; i++) {
             jobs[i] = buildJob(Integer.toString(i));
             jobIngestTestService.createJobCommand(Command.SCHEDULE, jobs[i]);
         }
-        return jobs;
-    }
-
-    private void requestJobsWithMultipleThreads(int nrJobs, int nrThreads) throws InterruptedException {
-        Job[] jobs = createJobs(nrJobs);
-        Function<String, Job> getJobById = id -> jobs[Integer.parseInt(id)];
-
-        ExecutorService executorService = Executors.newFixedThreadPool(nrThreads);
-        assertTrue("Nr job requesters must be a divisor of the number of jobs", nrJobs % nrThreads== 0);
-        List<JobRequester> jobRequesters = new ArrayList<>();
-        for (int i=0; i<nrThreads; i++) {
-            jobRequesters.add(new JobRequester("requester-" + i, nrJobs / nrThreads, getJobById));
-        }
-        executorService.invokeAll(jobRequesters);
     }
 
     private Job buildJob(String jobId) {
@@ -122,22 +119,25 @@ public class IngestAndProcessTest {
 
         private final String requesterId;
         private final int nrJobsToRequest;
-        private final Function<String, Job> getJobById;
 
-        JobRequester(String requesterId, int nrJobsToRequest, Function<String, Job> getJobById) {
+        JobRequester(String requesterId, int nrJobsToRequest) {
             this.requesterId = requesterId;
             this.nrJobsToRequest = nrJobsToRequest;
-            this.getJobById = getJobById;
         }
 
         @Override
         public Void call() {
-            for (int i = 0; i<nrJobsToRequest; i++) {
-                ResponseEntity<JobResponse> response =
-                        restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, requesterId);
-                assertEquals(HttpStatus.OK, response.getStatusCode());
-                assertTrue(response.getBody().isJobAvailable());
-                jobIngestTestService.createJobCommand(Command.JOB_FINISHED, getJobById.apply(response.getBody().getJobId()));
+            try {
+                for (int i = 0; i < nrJobsToRequest; i++) {
+                    ResponseEntity<JobResponse> response =
+                            restTemplate.getForEntity("/nextjob?requesterId={requesterId}", JobResponse.class, requesterId);
+                    assertEquals(HttpStatus.OK, response.getStatusCode());
+                    assertTrue(response.getBody().isJobAvailable());
+                    jobIngestTestService.createJobCommand(Command.JOB_FINISHED, response.getBody().getJobId());
+                }
+            } catch (Throwable t) {
+                System.out.println(t.getMessage());
+                t.printStackTrace();
             }
             return null;
         }
